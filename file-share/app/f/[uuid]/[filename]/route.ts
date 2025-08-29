@@ -23,7 +23,15 @@ export async function GET(
     const contentType = mime.lookup(decodedFilename) || 'application/octet-stream';
     
     // Return file as response
-    return new NextResponse(fileBuffer, {
+    // Create a stream from the buffer
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(fileBuffer);
+        controller.close();
+      },
+    });
+    
+    return new Response(stream, {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${decodedFilename}"`,
