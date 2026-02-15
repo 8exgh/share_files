@@ -57,17 +57,21 @@ export async function saveFileStream(
   body: ReadableStream<Uint8Array>,
   boundary: string
 ): Promise<UploadedFile | null> {
+  console.log('[STREAM] saveFileStream called');
   await ensureUploadDir();
 
   return new Promise((resolve, reject) => {
+    console.log('[STREAM] creating busboy instance');
     const busboy = Busboy({
       headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
     });
 
     let result: UploadedFile | null = null;
     let fileProcessed = false;
+    let lastLogTime = Date.now();
 
     busboy.on('file', (fieldname: string, fileStream: Readable, info: { filename: string; encoding: string; mimeType: string }) => {
+      console.log('[STREAM] busboy "file" event:', { fieldname, filename: info.filename, mimeType: info.mimeType });
       if (fileProcessed) {
         fileStream.resume();
         return;
@@ -81,15 +85,22 @@ export async function saveFileStream(
 
       fs.mkdir(fileDir, { recursive: true }).then(() => {
         const filePath = path.join(fileDir, sanitizedFilename);
+        console.log('[STREAM] writing to:', filePath);
         const writeStream = createWriteStream(filePath);
 
         fileStream.on('data', (chunk: Buffer) => {
           fileSize += chunk.length;
+          const now = Date.now();
+          if (now - lastLogTime > 5000) {
+            console.log(`[STREAM] progress: ${(fileSize / 1024 / 1024).toFixed(1)}MB received`);
+            lastLogTime = now;
+          }
         });
 
         fileStream.pipe(writeStream);
 
         writeStream.on('finish', () => {
+          console.log(`[STREAM] write complete: ${(fileSize / 1024 / 1024).toFixed(1)}MB`);
           result = {
             id: fileId,
             filename: sanitizedFilename,
@@ -100,22 +111,28 @@ export async function saveFileStream(
         });
 
         writeStream.on('error', (err) => {
+          console.error('[STREAM] writeStream error:', err);
           reject(err);
         });
-      }).catch(reject);
+      }).catch((err) => { console.error('[STREAM] mkdir error:', err); reject(err); });
     });
 
     busboy.on('finish', () => {
+      console.log('[STREAM] busboy "finish" event, result:', result ? result.filename : 'null');
       resolve(result);
     });
 
     busboy.on('error', (err: Error) => {
+      console.error('[STREAM] busboy error:', err);
       reject(err);
     });
 
     // Convert web ReadableStream to Node.js Readable and pipe to busboy
+    console.log('[STREAM] converting ReadableStream and piping to busboy...');
     const nodeStream = Readable.fromWeb(body as import('stream/web').ReadableStream);
+    nodeStream.on('error', (err) => { console.error('[STREAM] nodeStream error:', err); reject(err); });
     nodeStream.pipe(busboy);
+    console.log('[STREAM] pipe connected, waiting for data...');
   });
 }
 
