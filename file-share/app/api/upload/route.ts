@@ -25,15 +25,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check file size
-    const maxSize = parseInt(process.env.MAX_FILE_SIZE || '104857600');
-    if (file.size > maxSize) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        message: `File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB`
-      }, { status: 400 });
-    }
-
     // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);

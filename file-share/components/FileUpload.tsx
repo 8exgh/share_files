@@ -45,13 +45,6 @@ export default function FileUpload({ onUploadComplete }: FileUploadProps) {
     setError('');
     setProgress(0);
     
-    // Check file size client-side
-    const maxSize = 104857600; // 100MB
-    if (file.size > maxSize) {
-      setError(`File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB`);
-      return;
-    }
-
     setUploading(true);
     
     const formData = new FormData();
