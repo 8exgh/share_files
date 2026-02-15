@@ -1,6 +1,9 @@
 import fs from 'fs/promises';
+import { createWriteStream } from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { Readable } from 'stream';
+import Busboy from 'busboy';
 import { UploadedFile } from '@/types';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
@@ -48,6 +51,72 @@ export async function saveFile(buffer: Buffer, originalFilename: string): Promis
   };
   
   return uploadedFile;
+}
+
+export async function saveFileStream(
+  body: ReadableStream<Uint8Array>,
+  boundary: string
+): Promise<UploadedFile | null> {
+  await ensureUploadDir();
+
+  return new Promise((resolve, reject) => {
+    const busboy = Busboy({
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+    });
+
+    let result: UploadedFile | null = null;
+    let fileProcessed = false;
+
+    busboy.on('file', (fieldname: string, fileStream: Readable, info: { filename: string; encoding: string; mimeType: string }) => {
+      if (fileProcessed) {
+        fileStream.resume();
+        return;
+      }
+      fileProcessed = true;
+
+      const fileId = uuidv4();
+      const sanitizedFilename = sanitizeFilename(info.filename);
+      const fileDir = path.join(UPLOAD_DIR, fileId);
+      let fileSize = 0;
+
+      fs.mkdir(fileDir, { recursive: true }).then(() => {
+        const filePath = path.join(fileDir, sanitizedFilename);
+        const writeStream = createWriteStream(filePath);
+
+        fileStream.on('data', (chunk: Buffer) => {
+          fileSize += chunk.length;
+        });
+
+        fileStream.pipe(writeStream);
+
+        writeStream.on('finish', () => {
+          result = {
+            id: fileId,
+            filename: sanitizedFilename,
+            size: fileSize,
+            uploadDate: new Date().toISOString(),
+            downloadUrl: `/f/${fileId}/${encodeURIComponent(sanitizedFilename)}`,
+          };
+        });
+
+        writeStream.on('error', (err) => {
+          reject(err);
+        });
+      }).catch(reject);
+    });
+
+    busboy.on('finish', () => {
+      resolve(result);
+    });
+
+    busboy.on('error', (err: Error) => {
+      reject(err);
+    });
+
+    // Convert web ReadableStream to Node.js Readable and pipe to busboy
+    const nodeStream = Readable.fromWeb(body as import('stream/web').ReadableStream);
+    nodeStream.pipe(busboy);
+  });
 }
 
 export async function listFiles(): Promise<UploadedFile[]> {

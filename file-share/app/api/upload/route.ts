@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthenticated } from '@/lib/auth';
-import { saveFile } from '@/lib/storage';
+import { saveFileStream } from '@/lib/storage';
 import { ApiResponse, UploadedFile } from '@/types';
 
 export async function POST(request: NextRequest) {
@@ -14,23 +14,39 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // Parse multipart form data
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
+    const contentType = request.headers.get('content-type') || '';
+    if (!contentType.includes('multipart/form-data')) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        message: 'Content-Type must be multipart/form-data'
+      }, { status: 400 });
+    }
 
-    if (!file) {
+    if (!request.body) {
       return NextResponse.json<ApiResponse>({
         success: false,
         message: 'No file provided'
       }, { status: 400 });
     }
 
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    // Extract boundary from content-type
+    const boundary = contentType.split('boundary=')[1];
+    if (!boundary) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        message: 'Invalid multipart boundary'
+      }, { status: 400 });
+    }
 
-    // Save file
-    const uploadedFile = await saveFile(buffer, file.name);
+    // Stream the request body to disk
+    const uploadedFile = await saveFileStream(request.body, boundary);
+
+    if (!uploadedFile) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        message: 'No file provided'
+      }, { status: 400 });
+    }
 
     return NextResponse.json<ApiResponse<UploadedFile>>({
       success: true,
@@ -46,8 +62,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const runtime = 'nodejs';
