@@ -153,6 +153,37 @@ export async function saveFileStream(
   });
 }
 
+export async function saveNote(content: string, name?: string): Promise<UploadedFile> {
+  await ensureUploadDir();
+
+  const fileId = uuidv4();
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const defaultName = `Note_${now.getFullYear()}_${pad(now.getMonth() + 1)}_${pad(now.getDate())}___${pad(now.getHours())}_${pad(now.getMinutes())}_${pad(now.getSeconds())}`;
+
+  let baseName = name && name.trim() ? sanitizeFilename(name.trim()) : defaultName;
+  // Ensure .txt extension
+  if (!baseName.toLowerCase().endsWith('.txt')) {
+    baseName += '.txt';
+  }
+
+  const fileDir = path.join(UPLOAD_DIR, fileId);
+  await fs.mkdir(fileDir, { recursive: true });
+
+  const filePath = path.join(fileDir, baseName);
+  await fs.writeFile(filePath, content, 'utf-8');
+
+  const stats = await fs.stat(filePath);
+
+  return {
+    id: fileId,
+    filename: baseName,
+    size: stats.size,
+    uploadDate: now.toISOString(),
+    downloadUrl: `/f/${fileId}/${encodeURIComponent(baseName)}`,
+  };
+}
+
 export async function listFiles(): Promise<UploadedFile[]> {
   await ensureUploadDir();
   

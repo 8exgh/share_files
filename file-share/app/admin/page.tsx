@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import FileUpload from '@/components/FileUpload';
+import CreateNote from '@/components/CreateNote';
 import FileList from '@/components/FileList';
 import { UploadedFile } from '@/types';
 
@@ -75,6 +76,11 @@ export default function AdminDashboard() {
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Upload File</h2>
             <FileUpload onUploadComplete={handleUploadComplete} />
+          </div>
+
+          {/* Create Note Section */}
+          <div className="mb-8">
+            <CreateNote onNoteCreated={handleUploadComplete} />
           </div>
 
           {/* Files List Section */}
