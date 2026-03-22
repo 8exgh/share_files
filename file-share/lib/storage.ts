@@ -69,6 +69,15 @@ export async function saveFileStream(
     let result: UploadedFile | null = null;
     let fileProcessed = false;
     let lastLogTime = Date.now();
+    let writeFinished = false;
+    let busboyFinished = false;
+
+    const maybeResolve = () => {
+      if (writeFinished && busboyFinished) {
+        console.log('[STREAM] both busboy and writeStream finished, resolving with:', result ? result.filename : 'null');
+        resolve(result);
+      }
+    };
 
     busboy.on('file', (fieldname: string, fileStream: Readable, info: { filename: string; encoding: string; mimeType: string }) => {
       console.log('[STREAM] busboy "file" event:', { fieldname, filename: info.filename, mimeType: info.mimeType });
@@ -108,6 +117,8 @@ export async function saveFileStream(
             uploadDate: new Date().toISOString(),
             downloadUrl: `/f/${fileId}/${encodeURIComponent(sanitizedFilename)}`,
           };
+          writeFinished = true;
+          maybeResolve();
         });
 
         writeStream.on('error', (err) => {
@@ -118,8 +129,14 @@ export async function saveFileStream(
     });
 
     busboy.on('finish', () => {
-      console.log('[STREAM] busboy "finish" event, result:', result ? result.filename : 'null');
-      resolve(result);
+      console.log('[STREAM] busboy "finish" event');
+      busboyFinished = true;
+      // If no file was found in the upload, resolve immediately with null
+      if (!fileProcessed) {
+        resolve(null);
+      } else {
+        maybeResolve();
+      }
     });
 
     busboy.on('error', (err: Error) => {
