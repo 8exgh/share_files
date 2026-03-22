@@ -38,10 +38,12 @@ WORKDIR /app
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/server-wrapper.js ./
+COPY --from=builder /app/lib/request-logger.js ./lib/
 
-# Create uploads directory with proper permissions
-RUN mkdir -p uploads && \
-    chown -R nextjs:nodejs uploads
+# Create uploads and logs directories with proper permissions
+RUN mkdir -p uploads logs && \
+    chown -R nextjs:nodejs uploads logs
 
 # Switch to non-root user
 USER nextjs
@@ -58,4 +60,4 @@ ENV PORT=3000
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
-CMD ["node", "server.js"]
+CMD ["node", "server-wrapper.js"]
