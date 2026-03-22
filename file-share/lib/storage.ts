@@ -7,6 +7,7 @@ import Busboy from 'busboy';
 import { UploadedFile } from '@/types';
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+const AUTO_DELETE_MARKER = '.autodelete';
 
 export async function ensureUploadDir() {
   try {
@@ -38,18 +39,22 @@ export async function saveFile(buffer: Buffer, originalFilename: string): Promis
   
   // Save file
   await fs.writeFile(filePath, buffer);
-  
+
+  // Mark new uploads for auto-deletion by default
+  await fs.writeFile(path.join(fileDir, AUTO_DELETE_MARKER), '');
+
   // Get file stats
   const stats = await fs.stat(filePath);
-  
+
   const uploadedFile: UploadedFile = {
     id: fileId,
     filename: sanitizedFilename,
     size: stats.size,
     uploadDate: new Date().toISOString(),
-    downloadUrl: `/f/${fileId}/${encodeURIComponent(sanitizedFilename)}`
+    downloadUrl: `/f/${fileId}/${encodeURIComponent(sanitizedFilename)}`,
+    autoDelete: true,
   };
-  
+
   return uploadedFile;
 }
 
@@ -110,15 +115,19 @@ export async function saveFileStream(
 
         writeStream.on('finish', () => {
           console.log(`[STREAM] write complete: ${(fileSize / 1024 / 1024).toFixed(1)}MB`);
-          result = {
-            id: fileId,
-            filename: sanitizedFilename,
-            size: fileSize,
-            uploadDate: new Date().toISOString(),
-            downloadUrl: `/f/${fileId}/${encodeURIComponent(sanitizedFilename)}`,
-          };
-          writeFinished = true;
-          maybeResolve();
+          // Mark new uploads for auto-deletion by default
+          fs.writeFile(path.join(fileDir, AUTO_DELETE_MARKER), '').then(() => {
+            result = {
+              id: fileId,
+              filename: sanitizedFilename,
+              size: fileSize,
+              uploadDate: new Date().toISOString(),
+              downloadUrl: `/f/${fileId}/${encodeURIComponent(sanitizedFilename)}`,
+              autoDelete: true,
+            };
+            writeFinished = true;
+            maybeResolve();
+          }).catch(reject);
         });
 
         writeStream.on('error', (err) => {
@@ -173,6 +182,9 @@ export async function saveNote(content: string, name?: string): Promise<Uploaded
   const filePath = path.join(fileDir, baseName);
   await fs.writeFile(filePath, content, 'utf-8');
 
+  // Mark new notes for auto-deletion by default
+  await fs.writeFile(path.join(fileDir, AUTO_DELETE_MARKER), '');
+
   const stats = await fs.stat(filePath);
 
   return {
@@ -181,6 +193,7 @@ export async function saveNote(content: string, name?: string): Promise<Uploaded
     size: stats.size,
     uploadDate: now.toISOString(),
     downloadUrl: `/f/${fileId}/${encodeURIComponent(baseName)}`,
+    autoDelete: true,
   };
 }
 
@@ -197,19 +210,22 @@ export async function listFiles(): Promise<UploadedFile[]> {
       const stat = await fs.stat(dirPath);
       
       if (stat.isDirectory() && dir !== '.gitkeep') {
-        const filesInDir = await fs.readdir(dirPath);
-        
-        if (filesInDir.length > 0) {
-          const filename = filesInDir[0];
+        const allEntries = await fs.readdir(dirPath);
+        const autoDelete = allEntries.includes(AUTO_DELETE_MARKER);
+        const userFiles = allEntries.filter(f => !f.startsWith('.'));
+
+        if (userFiles.length > 0) {
+          const filename = userFiles[0];
           const filePath = path.join(dirPath, filename);
           const fileStat = await fs.stat(filePath);
-          
+
           files.push({
             id: dir,
             filename: filename,
             size: fileStat.size,
             uploadDate: fileStat.birthtime.toISOString(),
-            downloadUrl: `/f/${dir}/${encodeURIComponent(filename)}`
+            downloadUrl: `/f/${dir}/${encodeURIComponent(filename)}`,
+            autoDelete: autoDelete,
           });
         }
       }
@@ -242,6 +258,69 @@ export async function getFile(uuid: string, filename: string): Promise<Buffer | 
   } catch {
     return null;
   }
+}
+
+export async function setAutoDelete(uuid: string, autoDelete: boolean): Promise<boolean> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+    return false;
+  }
+
+  const markerPath = path.join(UPLOAD_DIR, uuid, AUTO_DELETE_MARKER);
+
+  try {
+    if (autoDelete) {
+      await fs.writeFile(markerPath, '');
+    } else {
+      await fs.unlink(markerPath);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function cleanupExpiredFiles(maxAgeMs: number = 60 * 60 * 1000): Promise<string[]> {
+  await ensureUploadDir();
+  const deleted: string[] = [];
+  const now = Date.now();
+
+  try {
+    const directories = await fs.readdir(UPLOAD_DIR);
+
+    for (const dir of directories) {
+      const dirPath = path.join(UPLOAD_DIR, dir);
+      const stat = await fs.stat(dirPath);
+
+      if (!stat.isDirectory() || dir === '.gitkeep') continue;
+
+      const allEntries = await fs.readdir(dirPath);
+
+      // Only delete if .autodelete marker exists
+      if (!allEntries.includes(AUTO_DELETE_MARKER)) continue;
+
+      const userFiles = allEntries.filter(f => !f.startsWith('.'));
+      if (userFiles.length === 0) {
+        // Empty dir with just a marker — clean it up
+        await fs.rm(dirPath, { recursive: true, force: true });
+        deleted.push(dir);
+        continue;
+      }
+
+      const filePath = path.join(dirPath, userFiles[0]);
+      const fileStat = await fs.stat(filePath);
+      const ageMs = now - fileStat.birthtime.getTime();
+
+      if (ageMs > maxAgeMs) {
+        await fs.rm(dirPath, { recursive: true, force: true });
+        deleted.push(dir);
+        console.log(`[CLEANUP] Deleted expired file: ${dir}/${userFiles[0]} (age: ${Math.round(ageMs / 60000)}min)`);
+      }
+    }
+  } catch (error) {
+    console.error('[CLEANUP] Error during cleanup:', error);
+  }
+
+  return deleted;
 }
 
 export async function deleteFile(uuid: string): Promise<boolean> {

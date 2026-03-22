@@ -11,6 +11,7 @@ interface FileListProps {
 export default function FileList({ files, onRefresh }: FileListProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -65,6 +66,28 @@ export default function FileList({ files, onRefresh }: FileListProps) {
       alert('Failed to delete file. Please try again.');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleToggleAutoDelete = async (file: UploadedFile) => {
+    setTogglingId(file.id);
+    try {
+      const response = await fetch(`/api/files/${file.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoDelete: !file.autoDelete }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        onRefresh();
+      } else {
+        alert(`Failed to update: ${data.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Failed to toggle auto-delete:', err);
+      alert('Failed to update auto-delete setting.');
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -138,6 +161,35 @@ export default function FileList({ files, onRefresh }: FileListProps) {
     </button>
   );
 
+  const autoDeleteToggle = (file: UploadedFile) => (
+    <button
+      onClick={() => handleToggleAutoDelete(file)}
+      disabled={togglingId === file.id}
+      className={`inline-flex items-center text-xs font-medium px-2 py-1 rounded-full disabled:opacity-50 disabled:cursor-not-allowed ${
+        file.autoDelete
+          ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+          : 'bg-green-100 text-green-800 hover:bg-green-200'
+      }`}
+      title={file.autoDelete ? 'Click to pin (prevent auto-delete)' : 'Click to enable auto-delete'}
+    >
+      {togglingId === file.id ? (
+        <svg className="animate-spin h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      ) : file.autoDelete ? (
+        <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ) : (
+        <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+        </svg>
+      )}
+      {file.autoDelete ? 'Auto-delete' : 'Pinned'}
+    </button>
+  );
+
   return (
     <>
       {/* Mobile: card layout */}
@@ -145,10 +197,11 @@ export default function FileList({ files, onRefresh }: FileListProps) {
         {files.map((file) => (
           <div key={file.id} className="bg-white shadow ring-1 ring-black ring-opacity-5 rounded-lg p-4">
             <div className="text-sm font-medium text-gray-900 break-all">{file.filename}</div>
-            <div className="mt-1 flex items-center space-x-3 text-xs text-gray-500">
+            <div className="mt-1 flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
               <span>{formatFileSize(file.size)}</span>
               <span>&middot;</span>
               <span>{formatDate(file.uploadDate)}</span>
+              {autoDeleteToggle(file)}
             </div>
             <div className="mt-3 flex items-center space-x-4">
               {copyButton(file)}
@@ -173,6 +226,9 @@ export default function FileList({ files, onRefresh }: FileListProps) {
                 Upload Date
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -188,6 +244,9 @@ export default function FileList({ files, onRefresh }: FileListProps) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {formatDate(file.uploadDate)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  {autoDeleteToggle(file)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center space-x-4">

@@ -4,6 +4,7 @@ export interface UploadedFile {
   size: number;
   uploadDate: string;
   downloadUrl: string;
+  autoDelete: boolean;
 }
 
 export interface ApiResponse<T = any> {
