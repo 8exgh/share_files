@@ -13,8 +13,10 @@ http.createServer = function patchedCreateServer(...args) {
 
       res.on('finish', () => {
         const duration = Date.now() - startTime;
+        // Prefer cf-connecting-ip (Cloudflare's true client IP), then x-forwarded-for, then socket
         const forwarded = req.headers['x-forwarded-for'];
-        const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : null)
+        const ip = req.headers['cf-connecting-ip']
+          || (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : null)
           || req.headers['x-real-ip']
           || req.socket?.remoteAddress
           || '-';
@@ -29,6 +31,8 @@ http.createServer = function patchedCreateServer(...args) {
           userAgent: req.headers['user-agent'] || '-',
           referer: req.headers['referer'] || '-',
           contentLength: res.getHeader('content-length') || '-',
+          country: req.headers['cf-ipcountry'] || '-',
+          cfRay: req.headers['cf-ray'] || '-',
         });
         appendToLog(line);
       });

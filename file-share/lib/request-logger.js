@@ -43,10 +43,12 @@ function formatLogLine(data) {
     data.statusCode || '-',
     data.duration != null ? data.duration + 'ms' : '-',
     sanitize(data.ip),
+    data.country || '-',
     data.url || '-',
     sanitize(data.userAgent),
     sanitize(data.referer),
     data.contentLength || '-',
+    data.cfRay || '-',
   ];
   return parts.join('\t');
 }
