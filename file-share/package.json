@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start"
+    "start": "next start",
+    "test": "playwright test",
+    "test:report": "playwright show-report",
+    "screenshots": "SCREENSHOTS=1 playwright test --project=screenshots"
   },
   "dependencies": {
     "@types/mime-types": "^3.0.1",
@@ -19,6 +22,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/busboy": "^1.5.4",
     "@types/formidable": "^3.4.5",

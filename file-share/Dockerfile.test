@@ -1,0 +1,16 @@
+# Playwright test runner image. The version must match @playwright/test in
+# package.json so the preinstalled browsers line up.
+FROM mcr.microsoft.com/playwright:v1.62.1-noble
+
+WORKDIR /work
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY playwright.config.ts ./
+COPY types ./types
+COPY tests ./tests
+
+ENV CI=1
+
+CMD ["npx", "playwright", "test"]

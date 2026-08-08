@@ -1,0 +1,2 @@
+# Dockerized test output (report + results are uploaded as CI artifacts)
+test-artifacts/

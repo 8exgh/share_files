@@ -1,0 +1,58 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: docker compose -f docker-compose.test.yml build
+
+      - name: Run Playwright tests in Docker
+        id: tests
+        continue-on-error: true
+        run: docker compose -f docker-compose.test.yml run --rm tests
+
+      - name: Tear down containers
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: test-artifacts/playwright-report
+          retention-days: 30
+
+      - name: Update test results in README
+        if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          node scripts/update-readme-test-results.js \
+            test-artifacts/test-results/results.json \
+            README.md \
+            "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if ! git diff --quiet README.md; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add README.md
+            git commit -m "docs: update README test results [skip ci]"
+            git push
+          fi
+
+      - name: Fail the job if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1

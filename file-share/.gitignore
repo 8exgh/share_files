@@ -55,3 +55,8 @@ logs/
 
 # OS files
 Thumbs.db
+
+# playwright
+/test-results/
+/playwright-report/
+/.test-uploads/

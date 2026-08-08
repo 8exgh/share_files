@@ -1,0 +1,7 @@
+# Build context allowlist for Dockerfile.test (BuildKit per-Dockerfile ignore).
+*
+!package.json
+!package-lock.json
+!playwright.config.ts
+!tests
+!types

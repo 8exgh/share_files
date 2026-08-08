@@ -61,3 +61,11 @@ Dockerfile
 
 # OS files
 Thumbs.db
+# Playwright (test image has its own allowlist in Dockerfile.test.dockerignore)
+tests
+playwright.config.ts
+test-results
+playwright-report
+.test-uploads
+Dockerfile.test
+Dockerfile.test.dockerignore

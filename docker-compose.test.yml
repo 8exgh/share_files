@@ -1,0 +1,34 @@
+services:
+  app:
+    build: ./file-share
+    environment:
+      SESSION_SECRET: playwright-test-secret-at-least-32-chars!
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: test-password-123
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  tests:
+    build:
+      context: ./file-share
+      dockerfile: Dockerfile.test
+    # Share the app container's network namespace so tests reach the server on
+    # localhost. That matters because the production app issues Secure session
+    # cookies and the copy-link feature uses the clipboard API — browsers only
+    # allow both over http on trustworthy origins like localhost.
+    network_mode: "service:app"
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://localhost:3000
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: test-password-123
+      CI: "true"
+    volumes:
+      - ./test-artifacts/playwright-report:/work/playwright-report
+      - ./test-artifacts/test-results:/work/test-results
