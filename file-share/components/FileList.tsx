@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { UploadedFile } from '@/types';
 
 interface FileListProps {
@@ -12,6 +12,26 @@ export default function FileList({ files, onRefresh }: FileListProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
+  const [previewContent, setPreviewContent] = useState('');
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (!previewFile) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPreviewFile(null);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [previewFile]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -34,6 +54,23 @@ export default function FileList({ files, onRefresh }: FileListProps) {
       setTimeout(() => setCopiedId(null), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+    }
+  };
+
+  const openPreview = async (file: UploadedFile) => {
+    setPreviewFile(file);
+    setPreviewContent('');
+    setPreviewError(null);
+    setPreviewLoading(true);
+
+    try {
+      const response = await fetch(file.downloadUrl);
+      if (!response.ok) throw new Error('Unable to load this file.');
+      setPreviewContent(await response.text());
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : 'Unable to load this file.');
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -161,6 +198,18 @@ export default function FileList({ files, onRefresh }: FileListProps) {
     </button>
   );
 
+  const previewButton = (file: UploadedFile) => file.filename.toLowerCase().endsWith('.txt') && (
+    <button
+      onClick={() => openPreview(file)}
+      className="text-indigo-600 hover:text-indigo-900 inline-flex items-center"
+    >
+      <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0c0 4.418-4.03 8-9 8s-9-3.582-9-8 4.03-8 9-8 9 3.582 9 8zm-9 3a3 3 0 100-6 3 3 0 000 6z" />
+      </svg>
+      View
+    </button>
+  );
+
   const autoDeleteToggle = (file: UploadedFile) => (
     <button
       onClick={() => handleToggleAutoDelete(file)}
@@ -204,6 +253,7 @@ export default function FileList({ files, onRefresh }: FileListProps) {
               {autoDeleteToggle(file)}
             </div>
             <div className="mt-3 flex items-center space-x-4">
+              {previewButton(file)}
               {copyButton(file)}
               {deleteButton(file)}
             </div>
@@ -250,6 +300,7 @@ export default function FileList({ files, onRefresh }: FileListProps) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center space-x-4">
+                    {previewButton(file)}
                     {copyButton(file)}
                     {deleteButton(file)}
                   </div>
@@ -259,6 +310,47 @@ export default function FileList({ files, onRefresh }: FileListProps) {
           </tbody>
         </table>
       </div>
+
+      {previewFile && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="text-preview-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setPreviewFile(null);
+          }}
+        >
+          <div className="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+              <h2 id="text-preview-title" className="min-w-0 truncate pr-4 text-base font-semibold text-gray-900">
+                {previewFile.filename}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setPreviewFile(null)}
+                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                aria-label="Close preview"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 bg-gray-50 p-4">
+              {previewLoading ? (
+                <div className="flex h-full items-center justify-center text-sm text-gray-500">Loading preview...</div>
+              ) : previewError ? (
+                <div className="flex h-full items-center justify-center text-sm text-red-600">{previewError}</div>
+              ) : (
+                <pre className="h-full w-full overflow-auto rounded border border-gray-200 bg-white p-4 font-mono text-sm text-gray-900 whitespace-pre">
+                  {previewContent}
+                </pre>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
