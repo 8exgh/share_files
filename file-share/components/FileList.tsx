@@ -16,6 +16,7 @@ export default function FileList({ files, onRefresh }: FileListProps) {
   const [previewContent, setPreviewContent] = useState('');
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewCopied, setPreviewCopied] = useState(false);
 
   useEffect(() => {
     if (!previewFile) return;
@@ -62,6 +63,7 @@ export default function FileList({ files, onRefresh }: FileListProps) {
     setPreviewContent('');
     setPreviewError(null);
     setPreviewLoading(true);
+    setPreviewCopied(false);
 
     try {
       const response = await fetch(file.downloadUrl);
@@ -71,6 +73,16 @@ export default function FileList({ files, onRefresh }: FileListProps) {
       setPreviewError(error instanceof Error ? error.message : 'Unable to load this file.');
     } finally {
       setPreviewLoading(false);
+    }
+  };
+
+  const copyPreviewContent = async () => {
+    try {
+      await navigator.clipboard.writeText(previewContent);
+      setPreviewCopied(true);
+      setTimeout(() => setPreviewCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy note:', err);
     }
   };
 
@@ -275,10 +287,10 @@ export default function FileList({ files, onRefresh }: FileListProps) {
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Upload Date
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="pl-6 pr-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" className="pl-2 pr-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -295,10 +307,10 @@ export default function FileList({ files, onRefresh }: FileListProps) {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {formatDate(file.uploadDate)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                <td className="pl-6 pr-2 py-4 whitespace-nowrap text-sm">
                   {autoDeleteToggle(file)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <td className="pl-2 pr-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center space-x-4">
                     {previewButton(file)}
                     {copyButton(file)}
@@ -326,16 +338,33 @@ export default function FileList({ files, onRefresh }: FileListProps) {
               <h2 id="text-preview-title" className="min-w-0 truncate pr-4 text-base font-semibold text-gray-900">
                 {previewFile.filename}
               </h2>
-              <button
-                type="button"
-                onClick={() => setPreviewFile(null)}
-                className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                aria-label="Close preview"
-              >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={copyPreviewContent}
+                  disabled={previewLoading || Boolean(previewError)}
+                  className="inline-flex items-center rounded px-2 py-1 text-sm font-medium text-indigo-600 hover:bg-indigo-50 hover:text-indigo-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <svg className="mr-1 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {previewCopied ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    )}
+                  </svg>
+                  {previewCopied ? 'Copied!' : 'Copy'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewFile(null)}
+                  className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                  aria-label="Close preview"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div className="min-h-0 flex-1 bg-gray-50 p-4">
               {previewLoading ? (
