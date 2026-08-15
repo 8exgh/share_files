@@ -109,6 +109,17 @@ export default function AdminDashboard() {
             </div>
             <FileList files={files} onRefresh={fetchFiles} />
           </div>
+
+          {/* Walkthrough Video Section */}
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Walkthrough</h2>
+            <video
+              controls
+              preload="metadata"
+              className="w-full max-w-4xl rounded-lg shadow ring-1 ring-black ring-opacity-5"
+              src="/file-share-walkthrough.mp4"
+            />
+          </div>
         </div>
       </div>
     </div>
