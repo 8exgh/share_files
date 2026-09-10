@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { MAX_CONCURRENT_DOWNLOADS, MAX_CONCURRENT_UPLOADS, MAX_STORAGE_SIZE, UPLOAD_DIR, UUID_PATTERN } from './security-config';
+import { MAX_CONCURRENT_DOWNLOADS, MAX_CONCURRENT_UPLOADS, MAX_STORAGE_SIZE, UPLOAD_DIR, SOCIAL_POSTS_DIR, UUID_PATTERN } from './security-config';
 import { HttpError } from './http';
 
 const shared = globalThis as typeof globalThis & { fileShareTransfers?: {
@@ -29,16 +29,19 @@ export async function reserveUpload(maxBytes: number): Promise<() => void> {
   try {
     await fs.mkdir(UPLOAD_DIR, { recursive: true });
     let usedBytes = 0;
-    for (const entry of await fs.readdir(UPLOAD_DIR, { withFileTypes: true })) {
-      if (!entry.isDirectory() || !UUID_PATTERN.test(entry.name)) continue;
-      const directory = path.join(UPLOAD_DIR, entry.name);
-      try {
-        for (const name of await fs.readdir(directory)) {
-          const stat = await fs.lstat(path.join(directory, name));
-          if (stat.isFile()) usedBytes += stat.size;
+    await fs.mkdir(SOCIAL_POSTS_DIR, { recursive: true, mode: 0o700 });
+    for (const root of [UPLOAD_DIR, SOCIAL_POSTS_DIR]) {
+      for (const entry of await fs.readdir(root, { withFileTypes: true })) {
+        if (!entry.isDirectory() || !UUID_PATTERN.test(entry.name)) continue;
+        const directory = path.join(root, entry.name);
+        try {
+          for (const name of await fs.readdir(directory)) {
+            const stat = await fs.lstat(path.join(directory, name));
+            if (stat.isFile()) usedBytes += stat.size;
+          }
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
         }
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       }
     }
     if (usedBytes + state.reservedBytes + maxBytes > MAX_STORAGE_SIZE) {

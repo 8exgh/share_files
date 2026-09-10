@@ -10,6 +10,7 @@ function positiveInteger(name: string, fallback: number): number {
 
 export const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || './uploads');
 export const SECURITY_DIR = path.join(UPLOAD_DIR, '.security');
+export const SOCIAL_POSTS_DIR = path.join(UPLOAD_DIR, '.social-posts');
 export const MAX_FILE_SIZE = positiveInteger('MAX_FILE_SIZE', 100 * 1024 * 1024);
 export const MAX_NOTE_SIZE = Math.min(MAX_FILE_SIZE, positiveInteger('MAX_NOTE_SIZE', 1024 * 1024));
 export const MAX_STORAGE_SIZE = positiveInteger('MAX_STORAGE_SIZE', 10 * 1024 * 1024 * 1024);

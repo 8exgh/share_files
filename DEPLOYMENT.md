@@ -88,6 +88,16 @@ do not contain a server session ID, so administrators will need to sign in again
 Treat the `.security` directory as sensitive; restoring old session records from a
 backup can restore a revoked session. Rotate `SESSION_SECRET` after such a restore.
 
+Social post records and their optional attachments live under
+`/app/uploads/.social-posts` in the same persistent volume. They require an admin
+session to view and stay available until explicitly deleted, including after
+archiving. Ordinary file expiration does not remove social posts. Attachments
+share `MAX_FILE_SIZE`, storage quota, and transfer limits with file uploads;
+each new post also reserves 32 KiB for metadata. Supported formats are JPEG, PNG,
+GIF, WebP, MP4, WebM, and MOV. Playback depends on the browser's codec support.
+The Social Posts tab tracks publication manually: checking both Twitter and
+LinkedIn archives a post, and clearing either checkbox returns it to the queue.
+
 Authentication attempts share one account-wide budget across both HTTP endpoints;
 the application does not trust user-supplied forwarding headers for this limit.
 After the budget is exhausted, password authentication returns 429 with

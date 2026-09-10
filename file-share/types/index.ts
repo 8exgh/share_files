@@ -12,3 +12,21 @@ export interface ApiResponse<T = any> {
   message?: string;
   data?: T;
 }
+
+export interface SocialPost {
+  id: string;
+  title: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  postedToTwitter: boolean;
+  postedToLinkedIn: boolean;
+  archived: boolean;
+  asset?: {
+    filename: string;
+    mimeType: string;
+    kind: 'image' | 'video';
+    size: number;
+    url: string;
+  };
+}

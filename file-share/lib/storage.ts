@@ -1,32 +1,20 @@
 import fs from 'node:fs/promises';
-import { constants, createWriteStream } from 'node:fs';
+import { constants } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { Readable, Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
-import Busboy from 'busboy';
 import { UploadedFile } from '@/types';
 import { HttpError } from './http';
 import { MAX_FILE_SIZE, MAX_NOTE_SIZE, UPLOAD_DIR, UPLOAD_TIMEOUT_MS, UUID_PATTERN } from './security-config';
 import { reserveUpload } from './transfers';
+import { withMultipartUpload } from './multipart';
+import { sanitizeFilename, uploadFilename } from './filenames';
+export { sanitizeFilename } from './filenames';
 
 const AUTO_DELETE_MARKER = '.autodelete';
 const TEMP_DIR = path.join(UPLOAD_DIR, '.pending');
 
 export async function ensureUploadDir() {
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
-}
-
-export function sanitizeFilename(filename: string): string {
-  return filename.replace(/[\/\\]/g, '').replace(/\.{2,}/g, '.').replace(/[^\w\s.-]/g, '').trim();
-}
-
-function uploadFilename(filename: string): string {
-  const sanitized = sanitizeFilename(filename);
-  if (!sanitized || sanitized.startsWith('.') || /[\x00-\x1f\x7f]/.test(sanitized) || Buffer.byteLength(sanitized) > 255) {
-    throw new HttpError(400, 'Filename must be visible, non-empty, and at most 255 bytes');
-  }
-  return sanitized;
 }
 
 async function pendingDirectory() {
@@ -60,84 +48,13 @@ export async function saveFile(buffer: Buffer, originalFilename: string): Promis
 export async function saveFileStream(
   body: ReadableStream<Uint8Array>, contentType: string, defaultAutoDelete = true, requestSignal?: AbortSignal,
 ): Promise<UploadedFile | null> {
-  let parser: ReturnType<typeof Busboy>;
-  try {
-    parser = Busboy({ headers: { 'content-type': contentType }, limits: {
-      fileSize: MAX_FILE_SIZE + 1, files: 1, fields: 1, parts: 3,
-      fieldSize: 16, fieldNameSize: 32, headerPairs: 20,
-    } });
-  } catch { throw new HttpError(400, 'Invalid multipart boundary'); }
-  const release = await reserveUpload(MAX_FILE_SIZE);
-  let directory: string | undefined;
-  const abort = new AbortController();
-  const signal = AbortSignal.any([abort.signal, ...(requestSignal ? [requestSignal] : [])]);
-  let failure: Error | undefined;
-  const fail = (error: Error) => {
-    failure ??= error;
-    // Let Busboy finish its current callback before destroying its streams.
-    queueMicrotask(() => abort.abort(error));
-  };
-  const timeout = setTimeout(() => fail(new HttpError(408, 'Upload timed out')), UPLOAD_TIMEOUT_MS);
-  const writes: Promise<void>[] = [];
-  try {
-    directory = await pendingDirectory();
-    let filename: string | undefined;
-    let size = 0;
-    let autoDelete = defaultAutoDelete;
-    parser.on('file', (field, file, info) => {
-      file.on('error', fail);
-      try {
-        if (field !== 'file') throw new HttpError(400, 'Multipart file field must be named file');
-        filename = uploadFilename(info.filename);
-        file.on('limit', () => fail(new HttpError(413, 'File exceeds the configured size limit')));
-        const counter = new Transform({ transform(chunk: Buffer, _encoding, callback) {
-          size += chunk.length;
-          callback(size > MAX_FILE_SIZE ? new HttpError(413, 'File exceeds the configured size limit') : null, chunk);
-        } });
-        writes.push(pipeline(file, counter, createWriteStream(path.join(directory!, filename), {
-          flags: 'wx', mode: 0o600,
-        }), { signal }).catch(fail));
-      } catch (error) {
-        file.resume();
-        fail(error as Error);
-      }
-    });
-    parser.on('field', (field, value, info) => {
-      if (field !== 'autoDelete' || info.nameTruncated || info.valueTruncated || !/^(true|false)$/i.test(value)) {
-        fail(new HttpError(400, 'autoDelete must be true or false'));
-      } else autoDelete = value.toLowerCase() === 'true';
-    });
-    parser.on('filesLimit', () => fail(new HttpError(400, 'Only one file is allowed')));
-    parser.on('fieldsLimit', () => fail(new HttpError(400, 'Too many multipart fields')));
-    parser.on('partsLimit', () => fail(new HttpError(400, 'Too many multipart parts')));
-    let bodySize = 0;
-    const bodyLimit = new Transform({ transform(chunk: Buffer, _encoding, callback) {
-      bodySize += chunk.length;
-      callback(bodySize > MAX_FILE_SIZE + 64 * 1024 ? new HttpError(413, 'Request body is too large') : null, chunk);
-    } });
-    try {
-      await pipeline(Readable.fromWeb(body as import('node:stream/web').ReadableStream), bodyLimit, parser, { signal });
-    } catch (error) { fail(error as Error); }
-    await Promise.all(writes);
-    if (failure) throw failure;
-    signal.throwIfAborted();
-    if (!filename) return null;
-    return await publish(directory, filename, size, autoDelete);
-  } catch (error) {
-    abort.abort();
-    await Promise.all(writes);
-    if (error instanceof HttpError) throw error;
-    if (requestSignal?.aborted) throw new HttpError(400, 'Upload was interrupted');
-    if ((error as NodeJS.ErrnoException).code === 'ENOSPC') throw new HttpError(507, 'Insufficient storage');
-    if (!(error as NodeJS.ErrnoException).code || (error as NodeJS.ErrnoException).code === 'ABORT_ERR') {
-      throw new HttpError(400, 'Invalid or incomplete multipart upload');
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-    try { if (directory) await fs.rm(directory, { recursive: true, force: true }); }
-    finally { release(); }
-  }
+  return withMultipartUpload(body, contentType, { fields: ['autoDelete'], fieldSize: 16 }, async upload => {
+    const value = upload.fields.autoDelete;
+    if (value !== undefined && !/^(true|false)$/i.test(value)) throw new HttpError(400, 'autoDelete must be true or false');
+    if (!upload.filename) return null;
+    const autoDelete = value === undefined ? defaultAutoDelete : value.toLowerCase() === 'true';
+    return publish(upload.directory, upload.filename, upload.size, autoDelete);
+  }, requestSignal);
 }
 
 export async function saveNote(content: string, name?: string): Promise<UploadedFile> {

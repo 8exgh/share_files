@@ -18,6 +18,7 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, and iron-session.
 - **Anonymous downloads** — share links (`/f/{uuid}/{filename}`) work without authentication
 - **Drag-and-drop uploads** — streamed to disk, so large files don't balloon memory
 - **Inline notes** — type or paste text and it becomes a shareable `.txt` file
+- **Social Posts** — queue drafts with a title, description, and optional image or video; track Twitter and LinkedIn posting separately, with automatic archiving and a Show archived toggle
 - **Auto-delete** — uploads expire after 1 hour (checked every 30 minutes); pin a file to keep it
 - **Copy-to-clipboard share links**, one click from the file list
 - **Responsive UI** — table on desktop, cards on mobile
@@ -81,7 +82,7 @@ npm run start  # production server
 
 ## Testing
 
-End-to-end tests are written with [Playwright](https://playwright.dev) and cover login/logout, session persistence, upload, anonymous download, notes, copy-link, auto-delete pinning, deletion, and 404 handling for bad links.
+End-to-end tests are written with [Playwright](https://playwright.dev) and cover login/logout, session persistence, upload, anonymous download, notes, copy-link, auto-delete pinning, deletion, social post archiving, private media and video playback, and 404 handling for bad links.
 
 ```bash
 cd file-share

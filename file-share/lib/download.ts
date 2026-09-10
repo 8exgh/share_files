@@ -1,10 +1,11 @@
 import type { FileHandle } from 'node:fs/promises';
 
 // Read one bounded chunk per pull; close on EOF, failure or cancellation.
-export function downloadStream(handle: FileHandle, signal: AbortSignal, release: () => void) {
+export function downloadStream(handle: FileHandle, signal: AbortSignal, release: () => void, range?: { start: number; end: number }) {
   let closed = false;
   let closePromise: Promise<void> | undefined;
   let controller: ReadableStreamDefaultController<Uint8Array>;
+  let position = range?.start ?? 0;
   const close = () => {
     if (closePromise) return closePromise;
     closed = true;
@@ -25,8 +26,11 @@ export function downloadStream(handle: FileHandle, signal: AbortSignal, release:
     async pull(value) {
       if (closed) return;
       try {
-        const buffer = Buffer.allocUnsafe(64 * 1024);
-        const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
+        const remaining = range ? range.end - position + 1 : Infinity;
+        if (remaining <= 0) { await close(); value.close(); return; }
+        const buffer = Buffer.allocUnsafe(Math.min(64 * 1024, remaining));
+        const { bytesRead } = await handle.read(buffer, 0, buffer.length, position);
+        position += bytesRead;
         if (closed) return;
         if (bytesRead === 0) { await close(); value.close(); }
         else value.enqueue(buffer.subarray(0, bytesRead));
