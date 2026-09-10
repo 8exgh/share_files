@@ -40,6 +40,29 @@ test.describe('authentication', () => {
       },
     });
     expect(upload.status()).toBe(401);
+    expect(upload.headers()['www-authenticate']).toContain('Basic');
+  });
+
+  test('uploads with basic auth and controls auto-delete', async ({ request }) => {
+    const authorization = `Basic ${Buffer.from(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}`).toString('base64')}`;
+
+    const expiring = await request.post('/api/upload', {
+      headers: { authorization },
+      multipart: {
+        file: { name: 'http-expiring.txt', mimeType: 'text/plain', buffer: Buffer.from('expires') },
+      },
+    });
+    expect(expiring.status()).toBe(200);
+    expect((await expiring.json()).data.autoDelete).toBe(true);
+
+    const permanent = await request.post('/api/upload?autoDelete=false', {
+      headers: { authorization },
+      multipart: {
+        file: { name: 'http-permanent.txt', mimeType: 'text/plain', buffer: Buffer.from('stays') },
+      },
+    });
+    expect(permanent.status()).toBe(200);
+    expect((await permanent.json()).data.autoDelete).toBe(false);
   });
 
   test('logs in and out', async ({ page }) => {

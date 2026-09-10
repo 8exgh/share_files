@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: file-share/package-lock.json
       
@@ -36,6 +36,12 @@ jobs:
       - name: Build Next.js application
         working-directory: ./file-share
         run: npm run build
+
+      - name: Check dependencies and security regressions
+        working-directory: ./file-share
+        run: |
+          npm audit --audit-level=high
+          npm run test:security
       
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

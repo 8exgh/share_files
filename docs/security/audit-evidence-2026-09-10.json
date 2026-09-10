@@ -1,0 +1,234 @@
+{
+  "auditDate": "2026-09-10",
+  "revision": "fa2941fa7f03297837e0ec1e7ed7f5bc26336922",
+  "scope": "Working tree including pre-existing uncommitted changes; isolated local production standalone server on Node 22.22.1; no production service testing",
+  "productionBuild": {
+    "command": "node node_modules/next/dist/bin/next build",
+    "bundler": "webpack (default); package build script uses Turbopack",
+    "result": "passed",
+    "effectiveConfig": {
+      "configFileName": "next.config.js",
+      "output": "standalone",
+      "imagesUnoptimized": true
+    },
+    "serverActions": {
+      "node": 0,
+      "edge": 0
+    }
+  },
+  "existingPlaywrightSuite": {
+    "passed": 16,
+    "failed": 0,
+    "durationSeconds": 4.9
+  },
+  "http": {
+    "unauthenticated": {
+      "GET /api/files": 401,
+      "POST /api/upload": 401,
+      "POST /api/note": 401,
+      "DELETE /api/files/00000000-0000-4000-8000-000000000001": 401,
+      "PATCH /api/files/00000000-0000-4000-8000-000000000001": 401
+    },
+    "responseHeaders": {
+      "content-security-policy": null,
+      "x-frame-options": null,
+      "x-content-type-options": null,
+      "referrer-policy": null,
+      "strict-transport-security": null
+    },
+    "cookieFlags": [
+      "Path=/",
+      "Expires=Fri, 11 Sep 2026 16:51:11 GMT",
+      "Max-Age=86340",
+      "Secure",
+      "HttpOnly",
+      "SameSite=strict"
+    ],
+    "failedLoginAttempts": [
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401
+    ],
+    "failedBasicAuthAttempts": [
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401
+    ],
+    "uploadExceedingLimit": {
+      "configuredLimit": 1024,
+      "status": 200,
+      "reportedBytes": 2048
+    },
+    "publicDownload": {
+      "status": 200,
+      "bytes": 2048,
+      "headers": {
+        "content-type": "text/plain",
+        "content-disposition": "attachment; filename=\"over-limit.txt\"",
+        "cache-control": "private, max-age=3600",
+        "x-content-type-options": null
+      }
+    },
+    "noteExceedingLimit": {
+      "status": 200,
+      "reportedBytes": 2048
+    },
+    "traversal": [
+      {
+        "path": "/f/%2e%2e%2fpackage.json/anything",
+        "status": 404
+      },
+      {
+        "path": "/f/8fd4b757-858c-4be3-9a2c-78579bf80d60/%2e%2e%2f%2e%2e%2fpackage.json",
+        "status": 404
+      },
+      {
+        "path": "/f/8fd4b757-858c-4be3-9a2c-78579bf80d60/%252e%252e%252f%252e%252e%252fpackage.json",
+        "status": 404
+      }
+    ],
+    "logoutReplay": {
+      "logoutStatus": 200,
+      "replayedCookieStatus": 200
+    },
+    "invalidCookieStatus": 401,
+    "markerCollision": {
+      "status": 200,
+      "reportedBytes": 38,
+      "actualBytes": 0
+    },
+    "hiddenFile": {
+      "status": 200,
+      "inList": false
+    },
+    "imageOptimizerStatus": 404,
+    "bearerLinkLogged": true,
+    "spoofedIpLogged": true
+  },
+  "storage": {
+    "memory": {
+      "fileBytes": 16777216,
+      "concurrentReads": 4,
+      "returnedBufferBytes": [
+        16777216,
+        16777216,
+        16777216,
+        16777216
+      ],
+      "arrayBuffersDeltaBytes": 67135096,
+      "rssDeltaBytes": 50069504
+    },
+    "interruptedUpload": {
+      "error": "simulated-client-disconnect",
+      "partialFileBytes": 65536,
+      "autoDelete": false,
+      "deletedByForcedExpiry": false,
+      "stillExists": true
+    },
+    "malformedMultipart": {
+      "exitCode": 1,
+      "signal": null,
+      "unhandledFileStreamError": true,
+      "stderr": "node:events:497\n      throw er; // Unhandled 'error' event\n      ^\n\nError: Unexpected end of form\n    at Multipart._final ([repository]/file-share/node_modules/busboy/lib/types/multipart.js:588:17)\n    at prefinish (node:internal/streams/writable:916:14)\n    at finishMaybe (node:internal/streams/writable:930:5)\n    at Writable.end (node:internal/streams/writable:845:5)\n    at Readable.onend (node:internal/streams/readable:948:10)\n    at Object.onceWrapper (node:events:633:28)\n    at Readable.emit (node:events:519:28)\n    at endReadableNT (node:internal/streams/readable:1698:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)\nEmitted 'error' event on FileStream instance at:\n    at emitErrorNT (node:internal/streams/destroy:170:8)\n    at emitErrorCloseNT (node:internal/streams/destroy:129:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)\n\nNode.js v22.22.1\n"
+    },
+    "logColumnInjection": {
+      "expectedColumns": 11,
+      "actualColumns": 13
+    }
+  },
+  "malformedHttp": {
+    "malformedResponse": {
+      "status": 500,
+      "text": "{\"success\":false,\"message\":\"An error occurred during file upload\"}"
+    },
+    "subsequentHealth": {
+      "status": 200
+    },
+    "uncaughtExceptionLogged": true,
+    "unexpectedEndOfFormLogged": true
+  },
+  "trackedSourceSecretPatternScan": {
+    "textFilesScanned": 61,
+    "matchedPatterns": 0,
+    "patterns": [
+      "private key header",
+      "GitHub token",
+      "AWS access key ID"
+    ],
+    "limitations": "No historical commits, binary media, actual deployment secrets, or comprehensive secret scanner coverage"
+  },
+  "sourceSha256": {
+    "file-share/app/admin/layout.tsx": "b27836f3a622544624bad02c45bd71f280831d7c7d7c6aec59193bcaaf784077",
+    "file-share/app/admin/page.tsx": "fb179d82238f11a84e5a20c667d18dacc7ee772f60639a1a2c29f7919ce1372a",
+    "file-share/app/api/auth/login/route.ts": "44dd3ec97b49f8d7f3cbcae8b4af66b3f51f22fe8d6e624059bb5a6c1b385ead",
+    "file-share/app/api/auth/logout/route.ts": "e174bceb6566d580d7d5d64e8a0b485f483760b1b94c77534aa5e88247afc1a0",
+    "file-share/app/api/files/[uuid]/route.ts": "e2d3147cdbbf6e20dc4ef30568c1a279d3c898b55bd483635f8de1651b86b979",
+    "file-share/app/api/files/route.ts": "1ca3355e8d81424adaa9ff7eb1b64cc412d10f9a0a5db148d02deb778f7430c2",
+    "file-share/app/api/note/route.ts": "99c9eb84dd9261e3145bf8cb4c98339263657cbc67753cca1749efbca767f9a6",
+    "file-share/app/api/upload/route.ts": "d756bdfe85ee2a2d906da913b6b2155750109cf33b30b5090d797db1940ba411",
+    "file-share/app/f/[uuid]/[filename]/route.ts": "9a854820d5ca0a01f2f55626d676cfc1e65395b1d3d53be214d930ec8036b7da",
+    "file-share/app/layout.tsx": "be59d745faf55fb56249f69533ec9939d5f374a222353c3cefd81b9e3dad08bc",
+    "file-share/app/page.tsx": "71afc9973cbda0038a80733f29a9502d4b1057626138fead31836194fc823d7d",
+    "file-share/components/CreateNote.tsx": "6378a60c43e4bad2361c1ecb4fd5b8bd96216631a9d3355a849974febc2bc3fc",
+    "file-share/components/FileList.tsx": "44cd8e341757f682417a904da78c8ccde60301657409848b4a82a451e3e74c23",
+    "file-share/components/FileUpload.tsx": "84d8accd874165306a5e4202b6b0520084175b8c950c74d3972c0cade82c3349",
+    "file-share/components/Footer.tsx": "f1e8c376bfffe38f6d487dd73cfcdda8241870b54991d2b928123bd7d7f45e25",
+    "file-share/components/HttpUploadInstructions.tsx": "f084180fd09e9c7149fa798e8a522a4335bb2247ed9e76cb744b65cec6f40869",
+    "file-share/components/LoginForm.tsx": "7f5994ba3e4d3e718de75ae9029d4b3c0ace99bdd34bc88565e3d0a425d720a4",
+    "file-share/lib/auth.ts": "3b5c3f2acf3170c5ca679c1c3dd8f333288cb6aa35886b4e24a9cf4f2934edd2",
+    "file-share/lib/request-logger.js": "b5a185814e0b05ad98a394f1a3c2d4ea2c5074a88dc7088a80d7936436ebd55e",
+    "file-share/lib/session.ts": "c2b5b6d11aa5922e5578f79b5bdb78359bec6fa4be2c9f05dcbcef1c1bce3000",
+    "file-share/lib/storage.ts": "1f1213a98ebc3f932bb8f448f116390b01b25b1a3ab0ff2db127afd94ad4331e",
+    "file-share/types/index.ts": "d0304fdbe92a0a1f389dfac1fe8061bfa8e11d6407a045954e37f289d009e017",
+    "file-share/package.json": "fd43fcf195354d7e72c800a9bfdec66dbbfacdd1862cbaa644baa2e578bdd258",
+    "file-share/package-lock.json": "c09ac06c973747e93fdd5ec864548a769ce70b0a10ee91e010b5ee51030f0d89",
+    "file-share/next.config.js": "e6159f5d9dfef8aca3bd67c0c3ce2f970fbd8e4f98066bea92b039ecf7efd23f",
+    "file-share/next.config.ts": "614bce25b089c3f19b1e17a6346c74b858034040154c6621e7d35303004767cc",
+    "file-share/server-wrapper.js": "a9d2fc25c07e2365ace225d77f1543a2a392f83f517e0d56a3253fb8c1136ce8",
+    "file-share/instrumentation.ts": "618896b65c6736bf36cd715d09d70deeb8726ab2fc9d2b3618cb138a1e6ae4ea"
+  }
+}

@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { login } from '@/lib/auth';
 import { ApiResponse } from '@/types';
+import { errorResponse, readJsonBody } from '@/lib/http';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request, 8192);
     const { username, password } = body;
 
-    if (!username || !password) {
+    if (typeof username !== 'string' || typeof password !== 'string' ||
+        !username || !password || username.length > 256 || password.length > 1024) {
       return NextResponse.json<ApiResponse>({
         success: false,
         message: 'Username and password are required'
@@ -28,10 +30,6 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
   } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json<ApiResponse>({
-      success: false,
-      message: 'An error occurred during login'
-    }, { status: 500 });
+    return errorResponse(error, 'An error occurred during login');
   }
 }

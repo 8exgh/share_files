@@ -1,0 +1,78 @@
+{
+  "date": "2026-09-10",
+  "addressedAuditFindings": [
+    "SEC-01",
+    "SEC-02",
+    "SEC-03",
+    "SEC-04",
+    "SEC-05",
+    "SEC-06",
+    "SEC-07"
+  ],
+  "runtime": "v24.21.0",
+  "productionImage": "sha256:dd11cb4aa7a82917c65a51d42914f88a83d69bea0a679e8ce638333c7ffd7a58",
+  "build": "Node 24 Alpine production Docker image; Next.js 15.5.25; npm run build -- Turbopack; TypeScript validation passed",
+  "securityTests": {
+    "passed": 16,
+    "failed": 0,
+    "command": "npm run test:security"
+  },
+  "playwrightTests": {
+    "passed": 20,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "command": "docker compose -p file-share-security-check -f docker-compose.test.yml run --rm tests"
+  },
+  "npmAudit": {
+    "production": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "all": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    }
+  },
+  "testedSourceSha256": {
+    "docker-compose.test.yml": "abc1f802449d044acfa62082ae68d0c15c0d3a0516c9e4b7ef716b6a534071fd",
+    "file-share/.dockerignore": "9914acf667374c56f5eef1423d23ee9146e70558f388efee4aae38270c61fcfa",
+    "file-share/Dockerfile": "439d09fee00048ccc753b49a84919aec0304fb29bfb8b6fccb35ca0ef5a25b2f",
+    "file-share/Dockerfile.test": "6c86bfd167c688685ef3685678a853ccd313e73233e5cbd22a83f501e7b8da61",
+    "file-share/Dockerfile.test.dockerignore": "0ec4bc9b5a5226207d21224640c040690e6b79c3f3d9887a987835d982ebbc0b",
+    "file-share/app/api/auth/login/route.ts": "6ae137f861bbef0df63d2d85c9cf98a65ce4ed82efc1164084950dfc116c9ea7",
+    "file-share/app/api/files/[uuid]/route.ts": "90cb4a16d23f7a3a9178e5e54ba23003954d618b84a6dbe28212f75bc5a3db26",
+    "file-share/app/api/note/route.ts": "50facd29e651aab2c58f4fdff67e53bb9d12753c6d1c24d8a73b49c1cf04e2ca",
+    "file-share/app/api/upload/route.ts": "d1eda2b389aefe5c5d5531ab628c0b34b6434ada11c210b535fdf8c4a5e8424c",
+    "file-share/app/f/[uuid]/[filename]/route.ts": "31d19f39177a92d71c598f2472b8e4e8176b11ef925ba1edfef87f85326f4c7c",
+    "file-share/instrumentation.ts": "68c28c17337e16d2a66e4a225fba8e4adae28ac3426ffede644e9bd0f02e982f",
+    "file-share/lib/auth-state.ts": "31a0ef8792e4fd743f8fc779b8ec6d9200befab3d5dd8e2def273b55e8aacb47",
+    "file-share/lib/auth.ts": "2f03929c67cf3f27cd51f6827b0fab49d41cbeed9bd5ec622efb302b9b9ded5b",
+    "file-share/lib/download.ts": "e9d48f21d57360743b15be40a09e02320f67a95e555b7ea0af49eda0377ddd2c",
+    "file-share/lib/http.ts": "54b9e21437e517ef63621e06aeda89c6cb6dedf940bd078ea5f481801d5f9ff8",
+    "file-share/lib/security-config.ts": "fe43083c831c0bed33f08a409229363492aaf08f8e3b423d908373b2c1c4de29",
+    "file-share/lib/session.ts": "1e3ea172a220deb71e7783b1812799a31a1752879a9b1df2e63b7852327cf1d0",
+    "file-share/lib/storage.ts": "0868d086d4495c47d8917e269bcdab08b5e6e5a63b54cc0b8d48a4a9175ef229",
+    "file-share/lib/transfers.ts": "87efe0a392ddb986a8fd33e64e016c7951174d634caa6d8a158aac435ae713e9",
+    "file-share/package-lock.json": "08645a7da009ded5464c8d2290c5b077e2e74ead4585225208f6f05bc93fe801",
+    "file-share/package.json": "b3fb8f4f8edfa436bf475897eeaeac8a5dcc775e0fe42f7826f699a6272a05c2",
+    "file-share/playwright.config.ts": "74f03ac75020ad97a482d50cd0f4a037bc55264cdd6990b934fcfa2ee1a5d495",
+    "file-share/tests/auth.spec.ts": "5d36d1d2669fe17b2c6c472d769b6ac6d5e49460dc76c8c22948ff2ca59a239b",
+    "file-share/tests/security.spec.ts": "7dc805c296150cf8824792dad0d0daa12f0771f054bfea94c78bbe20cbf1b30e",
+    "file-share/tests/security/security.test.cjs": "32bdf96d5756dd5c88b652d2d8fb425598b54a9bf4e40b0bafff7b8b0ca0e4f8"
+  },
+  "deploymentNotes": [
+    "Existing cookies require a fresh sign-in.",
+    "The uploads volume now persists private session/revocation and authentication-limit state.",
+    "Admission control targets the existing single-process deployment; shared transactional state is needed before scaling.",
+    "SEC-08 log retention/redaction and remaining browser/deployment observations are separate follow-up work."
+  ]
+}

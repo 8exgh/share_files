@@ -19,6 +19,7 @@ build
 dist
 
 # Environment files
+.env*
 .env
 .env.local
 .env.development.local
@@ -49,6 +50,7 @@ README.md
 *.md
 
 # Uploaded files (will be volume mounted)
+logs
 uploads/*
 !uploads/.gitkeep
 

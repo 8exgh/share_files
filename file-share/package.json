@@ -7,6 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "test": "playwright test",
+    "test:security": "node --test tests/security/*.test.cjs",
     "test:report": "playwright show-report",
     "screenshots": "SCREENSHOTS=1 playwright test --project=screenshots"
   },
@@ -16,21 +17,26 @@
     "formidable": "^3.5.4",
     "iron-session": "^8.0.4",
     "mime-types": "^3.0.1",
-    "next": "15.5.7",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "uuid": "^11.1.0"
+    "next": "15.5.25",
+    "react": "19.1.9",
+    "react-dom": "19.1.9",
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/busboy": "^1.5.4",
     "@types/formidable": "^3.4.5",
-    "@types/node": "^20",
+    "@types/node": "^24.13.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.28"
+    }
   }
 }

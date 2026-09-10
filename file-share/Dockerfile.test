@@ -9,8 +9,9 @@ RUN npm ci
 
 COPY playwright.config.ts ./
 COPY types ./types
+COPY lib ./lib
 COPY tests ./tests
 
 ENV CI=1
 
-CMD ["npx", "playwright", "test"]
+CMD ["sh", "-c", "npm run test:security && npx playwright test"]

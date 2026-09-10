@@ -5,3 +5,4 @@
 !playwright.config.ts
 !tests
 !types
+!lib

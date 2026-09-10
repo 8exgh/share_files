@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { isAuthenticated } from '@/lib/auth';
 import { deleteFile, setAutoDelete } from '@/lib/storage';
 import { ApiResponse } from '@/types';
+import { errorResponse, readJsonBody } from '@/lib/http';
 
 interface RouteParams {
   params: Promise<{
@@ -28,7 +29,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       }, { status: 400 });
     }
 
-    const body = await request.json();
+    const body = await readJsonBody(request, 1024);
     const { autoDelete } = body;
 
     if (typeof autoDelete !== 'boolean') {
@@ -52,11 +53,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       message: `Auto-delete ${autoDelete ? 'enabled' : 'disabled'}`
     });
   } catch (error) {
-    console.error('Toggle auto-delete error:', error);
-    return NextResponse.json<ApiResponse>({
-      success: false,
-      message: 'An error occurred'
-    }, { status: 500 });
+    return errorResponse(error, 'An error occurred while updating the file');
   }
 }
 

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isAuthenticated } from '@/lib/auth';
 import { saveNote } from '@/lib/storage';
 import { ApiResponse, UploadedFile } from '@/types';
+import { errorResponse, HttpError, readJsonBody } from '@/lib/http';
+import { MAX_NOTE_SIZE } from '@/lib/security-config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +15,11 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await readJsonBody(request, MAX_NOTE_SIZE + 8192);
     const { content, name } = body;
+    if (name !== undefined && (typeof name !== 'string' || name.length > 255)) {
+      throw new HttpError(400, 'Note name must be a string of at most 255 characters');
+    }
 
     if (!content || typeof content !== 'string' || content.trim().length === 0) {
       return NextResponse.json<ApiResponse>({
@@ -31,10 +36,6 @@ export async function POST(request: NextRequest) {
       message: 'Note created successfully'
     });
   } catch (error) {
-    console.error('[NOTE] error:', error);
-    return NextResponse.json<ApiResponse>({
-      success: false,
-      message: 'An error occurred while creating the note'
-    }, { status: 500 });
+    return errorResponse(error, 'An error occurred while creating the note');
   }
 }

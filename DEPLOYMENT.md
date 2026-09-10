@@ -59,7 +59,43 @@ ADMIN_USERNAME=<username>        # Admin login username
 ADMIN_PASSWORD=<password>        # Admin login password
 UPLOAD_DIR=/app/uploads         # Upload directory path
 MAX_FILE_SIZE=104857600         # Max file size (100MB)
+MAX_NOTE_SIZE=1048576           # Max UTF-8 note content (1MiB, capped by MAX_FILE_SIZE)
+MAX_STORAGE_SIZE=10737418240    # Uploaded-file quota (10GiB)
+MAX_CONCURRENT_UPLOADS=4
+MAX_CONCURRENT_DOWNLOADS=32
+UPLOAD_TIMEOUT_MS=600000        # Upload deadline (10 minutes)
+AUTH_MAX_ATTEMPTS=10            # Shared failed-password budget for login and Basic auth
+AUTH_WINDOW_MS=900000           # Budget resets after 15 minutes
 ```
+
+The build and runtime use Node.js 24 LTS. Keep the image updated; rebuilding an
+unsupported Node.js release does not restore security support.
+
+Uploads are written under `/app/uploads/.pending` and become publicly available
+only after successful completion. Oversized requests return 413; exhausted storage
+returns 507; transfer concurrency limits return 503 with `Retry-After`. Streaming
+uploads reserve `MAX_FILE_SIZE` bytes against the storage quota until completion,
+so leave enough quota headroom for simultaneous uploads. Temporary directories left
+by a terminated process are reclaimed by the cleanup job after the upload deadline
+plus a one-minute grace period. Previously created unmarked files remain pinned;
+review any partial uploads left by older versions manually.
+
+Session records and the shared authentication attempt counter live under
+`/app/uploads/.security`, which must remain writable and persist with the uploads
+volume. Logout deletes that session's server record. Changing the admin credentials
+or session secret invalidates existing sessions. Cookies issued before this upgrade
+do not contain a server session ID, so administrators will need to sign in again.
+Treat the `.security` directory as sensitive; restoring old session records from a
+backup can restore a revoked session. Rotate `SESSION_SECRET` after such a restore.
+
+Authentication attempts share one account-wide budget across both HTTP endpoints;
+the application does not trust user-supplied forwarding headers for this limit.
+After the budget is exhausted, password authentication returns 429 with
+`Retry-After` until the window expires. Existing valid sessions keep working.
+This limits attacker-induced lockout to a finite window; an upstream trusted proxy
+should also limit requests per client. The counters and transfer reservations are
+designed for this app's single Node process. Before running multiple instances or
+workers, replace admission control with a shared transactional store.
 
 ## Server Setup
 
@@ -71,7 +107,7 @@ sudo mkdir -p /var/lib/file-share/data
 
 # Set proper permissions
 sudo chown -R 1001:1001 /var/lib/file-share
-sudo chmod -R 755 /var/lib/file-share
+sudo chmod -R u=rwX,go= /var/lib/file-share
 ```
 
 ### Manual Container Management
@@ -113,7 +149,7 @@ tar -xzf file-share-backup-20240101.tar.gz -C /
 
 # Fix permissions
 sudo chown -R 1001:1001 /var/lib/file-share
-sudo chmod -R 755 /var/lib/file-share
+sudo chmod -R u=rwX,go= /var/lib/file-share
 
 # Start container
 docker start file-share-app
@@ -170,7 +206,7 @@ docker exec file-share-app ls -la /app/uploads
 sudo chown -R 1001:1001 /var/lib/file-share
 
 # Fix permissions
-sudo chmod -R 755 /var/lib/file-share
+sudo chmod -R u=rwX,go= /var/lib/file-share
 ```
 
 ## Security Considerations

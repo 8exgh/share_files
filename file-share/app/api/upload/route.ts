@@ -1,74 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isAuthenticated } from '@/lib/auth';
+import { hasValidBasicAuth, isAuthenticated } from '@/lib/auth';
 import { saveFileStream } from '@/lib/storage';
-import { ApiResponse, UploadedFile } from '@/types';
+import { errorResponse, HttpError } from '@/lib/http';
+import { MAX_FILE_SIZE } from '@/lib/security-config';
 
 export async function POST(request: NextRequest) {
-  console.log('[UPLOAD] POST /api/upload hit');
-  console.log('[UPLOAD] content-length:', request.headers.get('content-length'));
-  console.log('[UPLOAD] content-type:', request.headers.get('content-type'));
   try {
-    // Check authentication
-    const authenticated = await isAuthenticated();
-    console.log('[UPLOAD] authenticated:', authenticated);
-    if (!authenticated) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        message: 'Unauthorized'
-      }, { status: 401 });
+    // A valid browser session does not need to spend the password-attempt budget.
+    if (!await isAuthenticated() && !await hasValidBasicAuth(request.headers.get('authorization'))) {
+      throw new HttpError(401, 'Unauthorized', { 'WWW-Authenticate': 'Basic realm="File Share"' });
     }
-
     const contentType = request.headers.get('content-type') || '';
-    if (!contentType.includes('multipart/form-data')) {
-      console.log('[UPLOAD] rejected: not multipart/form-data');
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        message: 'Content-Type must be multipart/form-data'
-      }, { status: 400 });
+    if (!/^multipart\/form-data(?:;|$)/i.test(contentType)) {
+      throw new HttpError(400, 'Content-Type must be multipart/form-data');
     }
-
-    if (!request.body) {
-      console.log('[UPLOAD] rejected: no request.body');
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        message: 'No file provided'
-      }, { status: 400 });
+    if (!request.body) throw new HttpError(400, 'No file provided');
+    if (Number(request.headers.get('content-length')) > MAX_FILE_SIZE + 64 * 1024) {
+      throw new HttpError(413, 'Request body is too large');
     }
-
-    // Extract boundary from content-type
-    const boundary = contentType.split('boundary=')[1];
-    if (!boundary) {
-      console.log('[UPLOAD] rejected: no boundary found');
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        message: 'Invalid multipart boundary'
-      }, { status: 400 });
-    }
-    console.log('[UPLOAD] boundary extracted, calling saveFileStream...');
-
-    // Stream the request body to disk
-    const uploadedFile = await saveFileStream(request.body, boundary);
-    console.log('[UPLOAD] saveFileStream returned:', uploadedFile ? uploadedFile.filename : 'null');
-
-    if (!uploadedFile) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        message: 'No file provided'
-      }, { status: 400 });
-    }
-
-    console.log('[UPLOAD] success, file size:', uploadedFile.size);
-    return NextResponse.json<ApiResponse<UploadedFile>>({
-      success: true,
-      data: uploadedFile,
-      message: 'File uploaded successfully'
-    });
+    const value = request.nextUrl.searchParams.get('autoDelete');
+    if (value !== null && !/^(true|false)$/i.test(value)) throw new HttpError(400, 'autoDelete must be true or false');
+    const file = await saveFileStream(request.body, contentType, value?.toLowerCase() !== 'false', request.signal);
+    if (!file) throw new HttpError(400, 'No file provided');
+    return NextResponse.json({ success: true, data: file, message: 'File uploaded successfully' });
   } catch (error) {
-    console.error('[UPLOAD] error:', error);
-    return NextResponse.json<ApiResponse>({
-      success: false,
-      message: 'An error occurred during file upload'
-    }, { status: 500 });
+    if (request.body && !request.body.locked) void request.body.cancel().catch(() => {});
+    return errorResponse(error, 'An error occurred during file upload');
   }
 }
 

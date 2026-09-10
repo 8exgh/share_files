@@ -1,46 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFile } from '@/lib/storage';
+import { openFile } from '@/lib/storage';
+import { downloadStream } from '@/lib/download';
+import { reserveDownload } from '@/lib/transfers';
+import { errorResponse } from '@/lib/http';
 import mime from 'mime-types';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ uuid: string; filename: string }> }
-) {
+type RouteContext = { params: Promise<{ uuid: string; filename: string }> };
+
+async function serve(request: NextRequest, { params }: RouteContext, head: boolean) {
+  let release: (() => void) | undefined;
+  let file: Awaited<ReturnType<typeof openFile>> = null;
   try {
     const { uuid, filename } = await params;
-    
-    // Decode the filename
-    const decodedFilename = decodeURIComponent(filename);
-    
-    // Get file from storage
-    const fileBuffer = await getFile(uuid, decodedFilename);
-    
-    if (!fileBuffer) {
-      return new NextResponse('File not found', { status: 404 });
+    release = reserveDownload();
+    // Next already decodes route parameters. Accept only the stored filename.
+    file = await openFile(uuid, filename);
+    if (!file) { release(); return new NextResponse('File not found', { status: 404 }); }
+    const headers = {
+      'Content-Type': mime.lookup(file.filename) || 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${file.filename}"`,
+      'Content-Length': String(file.size),
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    };
+    if (head) {
+      await file.handle.close(); release();
+      return new Response(null, { headers });
     }
-    
-    // Determine content type
-    const contentType = mime.lookup(decodedFilename) || 'application/octet-stream';
-    
-    // Return file as response
-    // Create a stream from the buffer
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(fileBuffer);
-        controller.close();
-      },
-    });
-    
-    return new Response(stream, {
-      headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${decodedFilename}"`,
-        'Content-Length': fileBuffer.length.toString(),
-        'Cache-Control': 'private, max-age=3600',
-      },
-    });
+    return new Response(downloadStream(file.handle, request.signal, release), { headers });
   } catch (error) {
-    console.error('Download error:', error);
-    return new NextResponse('Internal server error', { status: 500 });
+    try { await file?.handle.close(); } finally { release?.(); }
+    return errorResponse(error, 'An error occurred during download');
   }
 }
+
+export const GET = (request: NextRequest, context: RouteContext) => serve(request, context, false);
+export const HEAD = (request: NextRequest, context: RouteContext) => serve(request, context, true);

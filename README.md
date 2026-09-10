@@ -87,6 +87,7 @@ End-to-end tests are written with [Playwright](https://playwright.dev) and cover
 cd file-share
 npm run test          # runs against a dev server it starts itself
 npm run test:report   # open the HTML report
+npm run test:security # security regressions with isolated temporary storage
 npm run screenshots   # regenerate the README screenshots in docs/screenshots/
 ```
 
@@ -110,3 +111,8 @@ The HTML report and JSON results land in `test-artifacts/`.
 ## Deployment
 
 The production image is a multi-stage Alpine build running the Next.js standalone server behind `dumb-init` as a non-root user. See [DEPLOYMENT.md](DEPLOYMENT.md) for details, including the uploads volume and request logging.
+
+Security controls include bounded streaming downloads, enforced upload/note limits,
+storage and transfer quotas, temporary upload cleanup, shared password throttling,
+and revocable server-backed sessions. See [DEPLOYMENT.md](DEPLOYMENT.md) for limits
+and upgrade behavior, and [SECURITY_AUDIT.md](SECURITY_AUDIT.md) for the audit record.

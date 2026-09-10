@@ -36,7 +36,7 @@ export default defineConfig({
         storageState: 'test-results/.auth/admin.json',
       },
       dependencies: ['setup'],
-      testIgnore: /screenshots\.spec\.ts/,
+      testIgnore: [/screenshots\.spec\.ts/, /security\/.*\.test\.cjs$/],
     },
     // Regenerates the README screenshots; opt-in via `npm run screenshots`.
     ...(process.env.SCREENSHOTS
@@ -67,6 +67,10 @@ export default defineConfig({
           ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',
           ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'test-password-123',
           UPLOAD_DIR: './.test-uploads',
+          MAX_FILE_SIZE: '1048576',
+          MAX_NOTE_SIZE: '65536',
+          AUTH_MAX_ATTEMPTS: '5',
+          AUTH_WINDOW_MS: '1000',
         },
       },
 });
