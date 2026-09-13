@@ -3,7 +3,7 @@
 [![Playwright Tests](https://github.com/8exgh/share_files/actions/workflows/playwright.yml/badge.svg)](https://github.com/8exgh/share_files/actions/workflows/playwright.yml)
 
 <!-- test-results:start -->
-**✅ 26 / 26 tests passing** — dockerized Playwright run on 2026-09-13 in 18s ([latest run](https://github.com/8exgh/share_files/actions/runs/34788771567))
+**✅ 26 / 26 tests passing** — dockerized Playwright run on 2026-09-13 in 19s ([latest run](https://github.com/8exgh/share_files/actions/runs/34789628853))
 <!-- test-results:end -->
 
 Created by **Sean Bennett**.
