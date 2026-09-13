@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import FileUpload from '@/components/FileUpload';
 import CreateNote from '@/components/CreateNote';
 import FileList from '@/components/FileList';
+import HttpUploadInstructions from '@/components/HttpUploadInstructions';
 import { UploadedFile } from '@/types';
 
 export default function AdminDashboard() {
@@ -59,6 +60,10 @@ export default function AdminDashboard() {
           {/* Create Note Section */}
           <div className="mb-8">
             <CreateNote onNoteCreated={handleUploadComplete} />
+          </div>
+
+          <div className="mb-8">
+            <HttpUploadInstructions />
           </div>
 
           {/* Files List Section */}
