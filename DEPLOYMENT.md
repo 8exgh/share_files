@@ -61,6 +61,8 @@ UPLOAD_DIR=/app/uploads         # Upload directory path
 MAX_FILE_SIZE=104857600         # Max file size (100MB)
 MAX_NOTE_SIZE=1048576           # Max UTF-8 note content (1MiB, capped by MAX_FILE_SIZE)
 MAX_STORAGE_SIZE=10737418240    # Uploaded-file quota (10GiB)
+MAX_ANONYMOUS_STORAGE_SIZE=1073741824 # Public files/notes quota (1GiB, also included in total)
+MAX_ANONYMOUS_FILES=1000         # Public entries, including in-progress uploads
 MAX_CONCURRENT_UPLOADS=4
 MAX_CONCURRENT_DOWNLOADS=32
 UPLOAD_TIMEOUT_MS=600000        # Upload deadline (10 minutes)
@@ -97,6 +99,33 @@ each new post also reserves 32 KiB for metadata. Supported formats are JPEG, PNG
 GIF, WebP, MP4, WebM, and MOV. Playback depends on the browser's codec support.
 The Social Posts tab tracks publication manually: checking both Twitter and
 LinkedIn archives a post, and clearing either checkbox returns it to the queue.
+
+Anonymous uploads and notes are stored under `/app/uploads/.anonymous`. Only
+the logged-out home page displays their public list and creation forms. Their
+public download and note-view links expire exactly 24 hours after publication;
+expired records and bytes are removed on access, on startup, or by a one-minute
+cleanup job. Retention cannot be changed or pinned. The public list never includes
+admin files or private social attachments. Notes are served as plain text with
+`nosniff` and a sandbox policy, and arbitrary uploads are served as downloads.
+
+Public uploads use the existing file/note size and transfer limits and the smaller
+`MAX_ANONYMOUS_STORAGE_SIZE` quota. Their bytes also count against `MAX_STORAGE_SIZE`.
+Uploads reserve the maximum allowed file or note size plus 4 KiB of metadata until
+completion. Both quotas include public notes and active reservations. The public
+list also has a maximum entry count (default 1,000), including pending uploads.
+At most two anonymous uploads can run together, leaving admin upload capacity
+under the default four-slot limit. If the overall limit is one, that slot is shared.
+
+Uploader labels use Cloudflare's `CF-Connecting-IP` and `CF-IPCountry` headers,
+as described in the [Cloudflare header reference](https://developers.cloudflare.com/fundamentals/reference/http-headers/).
+Allow origin access only through your trusted Cloudflare proxy or tunnel to prevent
+clients from supplying those headers directly. These labels are informational and
+are not used for authorization or quota enforcement. With no Cloudflare IP, the
+production server uses the socket peer address; without country data it displays
+`Unknown`. IPv4 shows its final two octets (`127.0.0.1` becomes `0.1`), and IPv6
+shows its final two groups. Public metadata stores only this suffix, the country,
+and a SHA-256 hash of the exact file or UTF-8 note bytes. Existing request logs
+continue to record visitor IPs according to the request-logging configuration.
 
 Authentication attempts share one account-wide budget across both HTTP endpoints;
 the application does not trust user-supplied forwarding headers for this limit.

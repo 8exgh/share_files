@@ -10,6 +10,8 @@ http.createServer = function patchedCreateServer(...args) {
     const originalListener = args[listenerIndex];
     args[listenerIndex] = function loggingListener(req, res) {
       const startTime = Date.now();
+      // Replace any client-supplied value with the actual peer for local/direct access.
+      req.headers['x-file-share-peer-ip'] = req.socket?.remoteAddress || '';
 
       res.on('finish', () => {
         const duration = Date.now() - startTime;

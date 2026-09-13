@@ -8,18 +8,19 @@
 
 Created by **Sean Bennett**.
 
-A self-hosted, anonymous file sharing app. A single authenticated admin uploads files (or jots down quick notes); anyone with the direct link can download them — no account, no login. Files are addressed by UUID so links can't be guessed, and everything auto-deletes after an hour unless you pin it.
+A self-hosted file sharing app. Visitors can upload public files or create anonymous notes from the logged-out home page, with links that expire after 24 hours. A single authenticated admin has a separate file manager with one-hour expiration or pinning, plus a private social post queue.
 
 Built with Next.js (App Router), TypeScript, Tailwind CSS, and iron-session.
 
 ## Features
 
-- **Admin-only uploads** — single admin account, session-based auth with secure HTTP-only cookies
+- **Anonymous files and notes** — public uploads, plain-text note view links, fixed 24-hour expiry with no pinning, masked IP suffix, Cloudflare country code, and SHA-256 hash
+- **Separate admin uploads** — single admin account, session-based auth with secure HTTP-only cookies
 - **Anonymous downloads** — share links (`/f/{uuid}/{filename}`) work without authentication
 - **Drag-and-drop uploads** — streamed to disk, so large files don't balloon memory
 - **Inline notes** — type or paste text and it becomes a shareable `.txt` file
 - **Social Posts** — queue drafts with a title, description, and optional image or video; track Twitter and LinkedIn posting separately, with automatic archiving and a Show archived toggle
-- **Auto-delete** — uploads expire after 1 hour (checked every 30 minutes); pin a file to keep it
+- **Auto-delete** — public files and notes expire after 24 hours; admin uploads expire after 1 hour (checked every 30 minutes) unless pinned
 - **Copy-to-clipboard share links**, one click from the file list
 - **Responsive UI** — table on desktop, cards on mobile
 - **Request logging** — every request logged with Cloudflare-aware client IPs
@@ -28,7 +29,7 @@ Built with Next.js (App Router), TypeScript, Tailwind CSS, and iron-session.
 
 ### Admin login
 
-The only page an unauthenticated visitor ever sees.
+The admin sign-in form now appears below anonymous sharing on the logged-out home page.
 
 ![Login page](docs/screenshots/login.png)
 
