@@ -18,6 +18,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Test README publishing
+        run: node --test scripts/publish-readme-test-results.test.cjs
+
       - name: Build Docker images
         run: docker compose -f docker-compose.test.yml build
 
@@ -40,18 +43,13 @@ jobs:
 
       - name: Update test results in README
         if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          TESTED_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          node scripts/update-readme-test-results.js \
+          bash scripts/publish-readme-test-results.sh "$TESTED_SHA" \
             test-artifacts/test-results/results.json \
-            README.md \
-            "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          if ! git diff --quiet README.md; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add README.md
-            git commit -m "docs: update README test results [skip ci]"
-            git push
-          fi
+            "$RUN_URL"
 
       - name: Fail the job if tests failed
         if: steps.tests.outcome == 'failure'
